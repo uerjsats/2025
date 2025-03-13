@@ -20,23 +20,40 @@ DHT dht(DHTPIN, DHTTYPE);
 Adafruit_MPU6050 mpu;
 
 void writeEEPROM(int address, const char* data, int length) {
+  for (int i = 0; i < length; i++) {
+    if (readEEPROMByte(address + i) != 0xFF) {
+      Serial.println("EEPROM já possui dados, pulando escrita."); //Pula escrita se ja tiver dados naquele endereço
+      return;
+    }
+  }
+
   Wire.beginTransmission(eepromAddress);
   Wire.write((address >> 8) & 0xFF); // Parte alta do endereço
   Wire.write(address & 0xFF);       // Parte baixa do endereço
-  
+
   for (int i = 0; i < length; i++) {
     Wire.write(data[i]);
     if ((i + 1) % 64 == 0) {  
       Wire.endTransmission();
       delay(5); 
       Wire.beginTransmission(eepromAddress);
-      Wire.write((address >> 8) & 0xFF);
-      Wire.write((address & 0xFF) + i + 1); 
+      Wire.write(((address + i + 1) >> 8) & 0xFF);
+      Wire.write((address + i + 1) & 0xFF);
     }
   }
-  
+
   Wire.endTransmission();
   delay(5); 
+}
+
+byte readEEPROMByte(int address) {
+  Wire.beginTransmission(eepromAddress);
+  Wire.write((address >> 8) & 0xFF); 
+  Wire.write(address & 0xFF);       
+  Wire.endTransmission();
+
+  Wire.requestFrom(eepromAddress, 1); 
+  return Wire.read(); 
 }
 
 void setup() {
@@ -80,7 +97,7 @@ void loop() {
 
   Serial.println(dataBuffer);
 
-  // Gravar dados na EEPROM a partir do endereço 0
+  // Gravar dados na EEPROM a partir do endereço 0, se estiver vazio
   writeEEPROM(0, dataBuffer, strlen(dataBuffer) + 1);
 
   delay(2000); 
