@@ -1,7 +1,7 @@
 //Biblioteca para comunicação I2C
 #include <Wire.h> 
-#define sda 13 
-#define scl 12
+#define sda 42 
+#define scl 41
 //Biblioteca para as funções do Arduino
 #include <Arduino.h>
 
@@ -14,7 +14,7 @@ Adafruit_BMP280 bmp; //'sensor_bmp' variável para chamar o sensor
 //Pino do sensor DHT
 #define pino_dht 48
 //Tipo de sensor DHT (DHT11 ou DHT12)
-#define tipo_dht DHT11 
+#define tipo_dht DHT22 
 //'dht' variável para chamar o sensor e configurando em relação ao pino e o tipo
 DHT dht(pino_dht, tipo_dht);
 
@@ -56,7 +56,7 @@ void setup()
     //inicializa o sensor DHT 
     dht.begin();
     //Inicializando o sensor MPU6050
-    if(!mpu.begin())
+    if(!mpu.begin(0x68))
     {
       Serial.println("Falha ao inicializar o sensor MPU6050");
     }
@@ -112,7 +112,6 @@ void setup()
     }
 
     Serial.println("");
-    delay(300);
 }
 
 
