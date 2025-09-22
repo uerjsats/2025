@@ -41,7 +41,8 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssiValue, int8_t snr);
 DHT dht(DHTPIN, DHTTYPE);
 
 // ---------------- Display OLED ----------------
-SSD1306Wire display(0x3c, 500000, SDA_OLED, SCL_OLED, GEOMETRY_128_64, RST_OLED);
+// Renomeado para evitar colisão com a instância 'display' da biblioteca Heltec
+SSD1306Wire myDisplay(0x3c, 500000, SDA_OLED, SCL_OLED, GEOMETRY_128_64, RST_OLED);
 
 void setup() {
   Serial.begin(115200);
@@ -50,11 +51,11 @@ void setup() {
   dht.begin();
 
   // Inicia display
-  display.init();
-  display.clear();
-  display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 0, "Inicializando...");
-  display.display();
+  myDisplay.init();
+  myDisplay.clear();
+  myDisplay.setFont(ArialMT_Plain_10);
+  myDisplay.drawString(0, 0, "Inicializando...");
+  myDisplay.display();
 
   // Inicia rádio
   Mcu.begin(HELTEC_BOARD, SLOW_CLK_TPYE);
@@ -106,13 +107,13 @@ void loop() {
                   packetCount, temp, hum, lastRSSI);
 
     // ---- Mostra no display ----
-    display.clear();
-    display.drawString(0, 0, "Enviando pacote:");
-    display.drawString(0, 12, "ID: " + String(packetCount));
-    display.drawString(0, 24, "Temp: " + String(temp, 1) + " C");
-    display.drawString(0, 36, "Umid: " + String(hum, 1) + " %");
-    display.drawString(0, 48, "RSSI: " + String(lastRSSI));
-    display.display();
+    myDisplay.clear();
+    myDisplay.drawString(0, 0, "Enviando pacote:");
+    myDisplay.drawString(0, 12, "ID: " + String(packetCount));
+    myDisplay.drawString(0, 24, "Temp: " + String(temp, 1) + " C");
+    myDisplay.drawString(0, 36, "Umid: " + String(hum, 1) + " %");
+    myDisplay.drawString(0, 48, "RSSI: " + String(lastRSSI));
+    myDisplay.display();
 
     Radio.Send((uint8_t *)txpacket, strlen((char *)txpacket));
     lora_idle = false;
@@ -154,12 +155,12 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssiValue, int8_t snr) {
   Serial.printf("Recebido de %d -> %s | RSSI: %d dBm\n", sender, rxpacket, lastRSSI);
 
   // Atualiza display também
-  display.clear();
-  display.drawString(0, 0, "ACK recebido!");
-  display.drawString(0, 16, "De: " + String(sender));
-  display.drawString(0, 28, "Msg: " + String(rxpacket));
-  display.drawString(0, 44, "RSSI: " + String(lastRSSI) + " dBm");
-  display.display();
+  myDisplay.clear();
+  myDisplay.drawString(0, 0, "ACK recebido!");
+  myDisplay.drawString(0, 16, "De: " + String(sender));
+  myDisplay.drawString(0, 28, "Msg: " + String(rxpacket));
+  myDisplay.drawString(0, 44, "RSSI: " + String(lastRSSI) + " dBm");
+  myDisplay.display();
 
   lora_idle = true;
   Radio.Rx(0);
