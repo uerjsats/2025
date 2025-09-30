@@ -1,8 +1,7 @@
-// ========== Bibliotecas ==========
 #include <Wire.h>
 #include <Arduino.h>
 
-#include <Adafruit_BMP280.h>
+#include <Adafruit_BME280.h>
 #include <DHT.h>
 
 #include <Adafruit_MPU6050.h>
@@ -18,35 +17,34 @@
 #define PRESSAO_NIVEL_MAR 1013.25 // hPa
 
 // ========== Objetos dos sensores ==========
-Adafruit_BMP280 bmp;               // Sensor de pressão/temperatura
+Adafruit_BME280 bme;               // Sensor de pressão/temperatura
 DHT dht(DHT_PIN, DHT_TYPE);        // Sensor de umidade/temperatura
 Adafruit_MPU6050 mpu;              // Sensor de aceleração/giroscópio
 
 // ========== Setup ==========
-void setup() {
+void setup() 
+{
   Serial.begin(115200);
   while (!Serial); // Aguarda inicialização da porta serial
   Wire.begin(SDA_PIN, SCL_PIN);
     
-  // ----- BMP280 -----
-  if (!bmp.begin(0x76)) {
-    Serial.println("Erro ao inicializar o sensor BMP280!");
-  } else {
-    Serial.println("Sensor BMP280 inicializado com sucesso.");
-    bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
-                    Adafruit_BMP280::SAMPLING_X2,
-                    Adafruit_BMP280::SAMPLING_X16,
-                    Adafruit_BMP280::FILTER_X16,
-                    Adafruit_BMP280::STANDBY_MS_500);
-  }
-
+  // ----- BME280 -----
+  if (!bme.begin(0x76)) 
+  {
+    Serial.println("Erro ao inicializar o sensor BME280 no endereço 0x76!");
+  }else
+    {
+      Serial.println("Sensor BME inicializado no endereço 0x76");
+    }
   // ----- DHT22 -----
   dht.begin();
 
   // ----- MPU6050 -----
-  if (!mpu.begin(0x68)) {
+  if (!mpu.begin(0x68)) 
+  {
     Serial.println("Erro ao inicializar o sensor MPU6050!");
-  } else {
+  } else 
+  {
     Serial.println("Sensor MPU6050 inicializado com sucesso.");
     mpu.setGyroRange(MPU6050_RANGE_500_DEG);
     mpu.setFilterBandwidth(MPU6050_BAND_5_HZ);
@@ -75,19 +73,21 @@ void setup() {
 }
 
 // ========== Loop ==========
-void loop() {
-  delay(2000);  // ✅ Trocar por millis() se quiser leitura assíncrona futuramente
+void loop() 
+{
+  delay(2000); 
 
-  // ----- Leitura BMP280 -----
-  float temp_bmp = bmp.readTemperature();
-  float pressao_bmp = bmp.readPressure() / 100.0F;  // Conversão para hPa
-  float altitude_bmp = bmp.readAltitude(PRESSAO_NIVEL_MAR);
+  // ----- Leitura BME280 -----
+  float temp_bme = bme.readTemperature();
+  float pressao_bme = bme.readPressure() / 100.0F;  // Conversão para hPa
+  float altitude_bme = bme.readAltitude(PRESSAO_NIVEL_MAR);
 
   // ----- Leitura DHT22 -----
   float temp_dht_f = dht.readTemperature(true);  // true = Fahrenheit
   float umidade_dht = dht.readHumidity();
 
-  if (isnan(temp_dht_f) || isnan(umidade_dht)) {
+  if (isnan(temp_dht_f) || isnan(umidade_dht)) 
+  {
     Serial.println("Erro ao ler dados do sensor DHT22.");
     return;
   }
@@ -99,10 +99,10 @@ void loop() {
   mpu.getEvent(&aceleracao, &giroscopio, &temp_mpu);
 
   // ========== Impressão dos dados ==========
-  Serial.println("===== SENSOR BMP280 =====");
-  Serial.print("Temperatura: "); Serial.print(temp_bmp); Serial.println(" °C");
-  Serial.print("Pressão: "); Serial.print(pressao_bmp); Serial.println(" hPa");
-  Serial.print("Altitude: "); Serial.print(altitude_bmp); Serial.println(" m\n");
+  Serial.println("===== SENSOR BME280 =====");
+  Serial.print("Temperatura: "); Serial.print(temp_bme); Serial.println(" °C");
+  Serial.print("Pressão: "); Serial.print(pressao_bme); Serial.println(" hPa");
+  Serial.print("Altitude: "); Serial.print(altitude_bme); Serial.println(" m\n");
 
   Serial.println("===== SENSOR DHT22 =====");
   Serial.print("Temperatura: "); Serial.print(temp_dht_f); Serial.println(" °F");
@@ -122,4 +122,3 @@ void loop() {
 
   Serial.println("======================================\n");
 }
-
