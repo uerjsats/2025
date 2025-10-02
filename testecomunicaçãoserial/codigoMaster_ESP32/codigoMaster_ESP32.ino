@@ -1,5 +1,4 @@
-#include <Arduino_MKRENV.h>
-#include <MKRENV.h>
+
 // Endereço 
 int enderecoMaster = 42;
 unsigned long tempoInicial;
