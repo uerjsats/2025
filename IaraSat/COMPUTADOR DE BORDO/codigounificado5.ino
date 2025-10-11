@@ -181,10 +181,11 @@ void setup()
   if (!bme.begin(0x76)) 
   {
     Serial.println("Erro ao inicializar o sensor BME280 no endereço 0x76!");
-  }else
-    {
+  }
+  else
+  {
       Serial.println("Sensor BME inicializado no endereço 0x76");
-    }
+  }
   // ----- DHT22 -----
   dht.begin();
 
@@ -192,7 +193,8 @@ void setup()
   if (!mpu.begin(0x68)) 
   {
     Serial.println("Erro ao inicializar o sensor MPU6050!");
-  } else 
+  } 
+  else 
   {
     Serial.println("Sensor MPU6050 inicializado com sucesso.");
     mpu.setGyroRange(MPU6050_RANGE_500_DEG);
@@ -310,40 +312,7 @@ void loop()
       }
   }
 
-  // Verifica se tem dado disponível no Serial
-  if (Serial.available() > 0) {
-    int opcao = Serial.parseInt();
-
-    switch(opcao) {
-      case 1: // MPU6050
-        Serial.println("Você escolheu MPU6050");
-        leituraMPU6050(dados);
-        break;
-
-      case 2: // BME280
-        Serial.println("Você escolheu BME280");
-        leituraBME280(dados);
-        break;
-
-      case 3: // DHT22
-        Serial.println("Você escolheu DHT22");
-        leituraDHT22(dados);
-        break;
-
-      case 4: // GPS
-        Serial.println("Você escolheu GPS");
-        leituraGPS(dados);
-        break;
-
-      default:
-        Serial.println("Opção inválida, tente novamente.");
-        break;
-    }
-
   delay(5000); // pequeno atraso para não lotar o monitor serial
-
-}
-
 
 }
 
@@ -352,14 +321,13 @@ void leituraMPU6050(sensorsData &dados) {
     sensors_event_t aceleracao, giroscopio, temp_mpu;
     mpu.getEvent(&aceleracao, &giroscopio, &temp_mpu);
 
-    Serial.println("===== SENSOR MPU6050 =====");
-    Serial.print("Aceleracao (m/s²) - X: "); Serial.print(aceleracao.acceleration.x);
-    Serial.print(" | Y: "); Serial.print(aceleracao.acceleration.y);
-    Serial.print(" | Z: "); Serial.println(aceleracao.acceleration.z);
+    Serial.print(":"); Serial.print(aceleracao.acceleration.x);
+    Serial.print(":"); Serial.print(aceleracao.acceleration.y);
+    Serial.print(":"); Serial.print(aceleracao.acceleration.z);
 
-    Serial.print("Giroscopio (°/s) - X: "); Serial.print(giroscopio.gyro.x * RAD_TO_DEG);
-    Serial.print(" | Y: "); Serial.print(giroscopio.gyro.y * RAD_TO_DEG);
-    Serial.print(" | Z: "); Serial.println(giroscopio.gyro.z * RAD_TO_DEG);
+    Serial.print(":"); Serial.print(giroscopio.gyro.x * RAD_TO_DEG);
+    Serial.print(":"); Serial.print(giroscopio.gyro.y * RAD_TO_DEG);
+    Serial.print(":"); Serial.print(giroscopio.gyro.z * RAD_TO_DEG);
 
     // Atualiza struct
     dados.accelX = aceleracao.acceleration.x;
@@ -374,10 +342,9 @@ void leituraBME280(sensorsData &dados) {
     float pressao_bme = bme.readPressure() / 100.0F;
     float altitude_bme = bme.readAltitude(PRESSAO_NIVEL_MAR);
 
-    Serial.println("===== SENSOR BME280 =====");
-    Serial.print("Temperatura: "); Serial.print(temp_bme); Serial.println(" °C");
-    Serial.print("Pressão: "); Serial.print(pressao_bme); Serial.println(" hPa");
-    Serial.print("Altitude: "); Serial.print(altitude_bme); Serial.println(" m\n");
+    Serial.print(":"); Serial.print(temp_bme); 
+    Serial.print(":"); Serial.print(pressao_bme); 
+    Serial.print(":"); Serial.print(altitude_bme); 
 
     // Atualiza struct
     dados.pressure = pressao_bme;
@@ -396,12 +363,9 @@ void leituraDHT22(sensorsData &dados) {
         return;
     }
 
-    float sensacao_termica = dht.computeHeatIndex(temp_dht_c, umidade_dht, false);
-
-    Serial.println("===== SENSOR DHT22 =====");
-    Serial.print("Temperatura: "); Serial.print(temp_dht_c); Serial.println(" °C");
-    Serial.print("Umidade: "); Serial.print(umidade_dht); Serial.println(" %");
-    Serial.print("Sensação térmica: "); Serial.print(sensacao_termica); Serial.println(" °C\n");
+    
+    Serial.print(":"); Serial.print(temp_dht_c); 
+    Serial.print(":"); Serial.println(umidade_dht);  
 
     // Atualiza struct
     dados.temperatureDHT = temp_dht_c;
@@ -415,10 +379,10 @@ void leituraGPS(sensorsData &dados) {
         gps.encode(gpsSerial.read());
 
         if (gps.location.isUpdated()) {
-            Serial.println("===== GPS =====");
-            Serial.print(": "); Serial.println(gps.location.lat(), 6);
-            Serial.print(": "); Serial.println(gps.location.lng(), 6);
-            Serial.print(": "); Serial.println(gps.satellites.value());
+
+            Serial.print(":"); Serial.print(gps.location.lat(), 6);
+            Serial.print(":"); Serial.print(gps.location.lng(), 6);
+            Serial.print(":"); Serial.println(gps.satellites.value());
 
             if (!gps.location.isValid()) {
                 Serial.println("Sem sinal...");
@@ -447,10 +411,10 @@ void aguardarResposta()
 
 bool receberRespostaslave() 
 {
-  if (Serial1.available() > 0 || Serial.available() > 0) 
+  if (Serial.available() > 0) 
   {
     String dadosRecebidos;
-    if (Serial1.available() > 0) 
+    if (Serial.available() > 0) 
     {
       dadosRecebidos = Serial1.readStringUntil('\n');
     } 
@@ -488,6 +452,7 @@ void enviarOrdemslave(String dados, int endereco)
   Serial.print(endereco);
   Serial.print(":");
   Serial.println(dados);
+
 }
 
 //RADIO
