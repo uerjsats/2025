@@ -418,8 +418,9 @@ int receberRespostaslave()
   if (Serial.available() > 0) 
   {
     String dadosRecebidos;
-    String dadosRecebidosSuprimentos;
+    String dadosRecebidosSuprimento;
     String dadosRecebidosMissao;
+    String dadosRecebidosAZ;
     String EnderecoStr;
     
       EnderecoStr = Serial.readStringUntil(':');
@@ -427,14 +428,20 @@ int receberRespostaslave()
       dadosRecebidos = Serial.readStringUntil('\n');
 
       switch(endereco){
-        case 1: //Suprimentos
-          dadosRecebidosSuprimentos = dadosRecebidos;
-          Serial.println("Suprimentos: " + dadosRecebidos);
+
+        case 1: //Suprimento
+          dadosRecebidosSuprimento = dadosRecebidos;
+          Serial.println("Suprimento: " + dadosRecebidos);
           break;
 
         case 2: //Missao
           dadosRecebidosMissao = dadosRecebidos;
           Serial.println("Missao: " + dadosRecebidos);
+          break;
+
+        case 3: //Angulo Controle de Atitude
+          dadosRecebidosAZ = dadosRecebidos;
+          Serial.println("Azimute: " + dadosRecebidos);
           break;
 
         default:
@@ -451,18 +458,11 @@ int receberRespostaslave()
     }
 }
 
-
-void processarDados(String slave, String dados) 
-{
-  Serial.println("Dados recebidos do " + slave + " : " + dados);
-  Serial1.println("Dados recebidos do" + slave + " : " + dados);  
-}
-
 void enviarOrdemslave(int Buscador) 
 {
   switch(Buscador){
     case 1:
-      Serial.println("CA Inicializado"); // Controle de atitude inicializado
+      Serial.println("1"); // Controle de atitude inicializado
       break;
     
     case 2:
@@ -473,20 +473,23 @@ void enviarOrdemslave(int Buscador)
       break;
 
     case 4:
-      Serial.println("Painel Aberto"); //Painel aberto
+      Serial.println("4"); //orienta pra luz
       break;
     
     case 5: 
-      Serial.println("Abrir antena"); //Antena inicializada
+      Serial.println("5"); //parar controle de atitude
       break;
     
     case 6: 
-      Serial.println("Orientacao luz"); // luz inicializada 
+      Serial.println("6"); //abrir painéis 
       break;
 
     case 7:
-      Serial.println("Missao inicializada"); //Missao começou
+      Serial.println("7"); //abrir antena
       break;
+
+    case 8:
+      Serial.println("8"); //Inicia Missão
 
     default:
       Serial.println("Ordem inválida: " + String(Buscador));
@@ -562,6 +565,10 @@ void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssiValue, int8_t snr)
     else if(strcmp(rxpacket, "7") == 0)
     {
         enviarOrdemslave(7);
+    }
+    else if(strcmp(rxpacket, "8") == 0)
+    {
+      enviarOrdemslave(8);
     }
 
     lora_idle = true;
