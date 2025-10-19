@@ -1,0 +1,52 @@
+// Bibliotecas
+#include <DallasTemperature.h>
+#include <OneWire.h>
+
+// Pinos válidos para Arduino Nano
+#define resistor 5   // Gate do MOSFET
+#define led 6        // LED indicador
+#define ONE_WIRE_BUS 2  // Pino do sensor DS18B20
+
+// Inicializa sensor
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+
+void setup() {
+  pinMode(resistor, OUTPUT); // controla MOSFET
+  pinMode(led, OUTPUT);
+  digitalWrite(led, LOW);
+  digitalWrite(resistor, LOW); // garante que MOSFET inicia desligado
+  Serial.begin(115200);
+  sensors.begin();
+}
+
+void loop() {
+  float temperatura;
+  temperatura = coletartemperatura();
+  controle(temperatura);
+}
+
+float coletartemperatura() {
+  sensors.requestTemperatures();
+  float temperaturaC = sensors.getTempCByIndex(0);
+  Serial.print("Temperatura: ");
+  Serial.print(temperaturaC);
+  Serial.println("ºC");
+  delay(5000);
+  return temperaturaC;
+}
+
+void controle(float temperatura) {
+  // Liga o MOSFET se temperatura < 30°C (para teste)
+  if (temperatura < 30.0) {
+    digitalWrite(resistor, HIGH); // liga MOSFET
+    digitalWrite(led, HIGH);
+    Serial.println("MOSFET: LIGADO");
+  } 
+  // Desliga o MOSFET se temperatura >= 40°C
+  else if (temperatura >= 40.0) {
+    digitalWrite(resistor, LOW); // desliga MOSFET
+    digitalWrite(led, LOW);
+    Serial.println("MOSFET: DESLIGADO");
+  }
+}
