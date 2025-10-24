@@ -21,7 +21,7 @@ DallasTemperature sensor3(&oneWire3);
 Adafruit_INA219 ina219;
 
 // ---------- Controle Térmico ----------
-#define resistor 5   // Gate do MOSFET
+#define mosfet 6   // Gate do MOSFET
 
 // ---------- Configuração ----------
 #define ENDERECO_SUPRIMENTO 1  // Endereço para identificar este módulo
@@ -35,7 +35,8 @@ void setup()
   sensor1.begin();
   sensor2.begin();
   sensor3.begin();
-  digitalWrite(resistor, LOW); // garante que MOSFET inicia desligado
+  pinMode(mosfet, OUTPUT);
+  digitalWrite(mosfet, LOW); // garante que MOSFET inicia desligado
 
   if (!ina219.begin()) 
   {
@@ -55,35 +56,28 @@ void loop()
   float current = ina219.getCurrent_mA();
 
   sensor1.requestTemperatures();
-  sensor2.requestTemperatures();
   sensor3.requestTemperatures();
 
   float temp1 = sensor1.getTempCByIndex(0);
-  float temp2 = sensor2.getTempCByIndex(0);
   float temp3 = sensor3.getTempCByIndex(0);
 
   bool t1_valida = (temp1 > -100.0 && temp1 < 125.0);
-  bool t2_valida = (temp2 > -100.0 && temp2 < 125.0);
   bool t3_valida = (temp3 > -100.0 && temp3 < 125.0);
 
   bool abaixo_25 = (t1_valida && temp1 < 25.0) ||
-                   (t2_valida && temp2 < 25.0) ||
                    (t3_valida && temp3 < 25.0);
 
   bool acima_40 = (t1_valida && temp1 >= 40.0) ||
-                  (t2_valida && temp2 >= 40.0) ||
                   (t3_valida && temp3 >= 40.0);
 
   if (abaixo_25)
   {
-      digitalWrite(resistor, HIGH);
-      digitalWrite(led, HIGH);
+      digitalWrite(mosfet, HIGH);
       Serial.println("MOSFET: LIGADO");
   }
   else if (acima_40)
   {
-      digitalWrite(resistor, LOW);
-      digitalWrite(led, LOW);
+      digitalWrite(mosfet, LOW);
       Serial.println("MOSFET: DESLIGADO");
   }
 
@@ -92,8 +86,6 @@ void loop()
   Serial.print(ENDERECO_SUPRIMENTO);
   Serial.print(":");
   Serial.print(temp1, 2);
-  Serial.print(":");
-  Serial.print(temp2, 2);
   Serial.print(":");
   Serial.print(temp3, 2);
   Serial.print(":");
