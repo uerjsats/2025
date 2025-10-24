@@ -6,7 +6,7 @@
 #define MY_ADDRESS 42
 #define DEST_ADDRESS 43
 
-#define RF_FREQUENCY                                913600000 // Hz
+#define RF_FREQUENCY                                915000000 // Hz
 #define TX_OUTPUT_POWER                             14        // dBm
 #define LORA_BANDWIDTH                              0         // 125 kHz
 #define LORA_SPREADING_FACTOR                       7         // [SF7..SF12]
