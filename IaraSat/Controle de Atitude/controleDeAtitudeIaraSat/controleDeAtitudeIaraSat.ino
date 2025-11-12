@@ -239,6 +239,16 @@ void loop()
       digitalWrite(IN2, LOW);
       modoAtual = MODOPARADO;
     }
+    else if(comando == "6")
+    {
+      Serial.println("Abrindo Painel Solares")
+    }
+
+    else if(comando == "7")
+    {
+      Serial.print("Abrindo Antena")
+    }
+
     else 
     {
       Serial.println("Comando inválido!");
