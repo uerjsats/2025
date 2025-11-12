@@ -5,6 +5,8 @@
 #define CONTROLLERMODE 0
 #define SERIAL_DEBUG_ENABLE 1
 
+#define LED 13
+
 double anguloOffset = 0;          // Ângulo adicional a ser adicionado após encontrar a luz
 bool luzEncontrada = false;       // Flag indicando se já encontrou a luz
 double anguloLuzEncontrada = 0;   // Ângulo onde a luz foi encontrada
@@ -221,21 +223,29 @@ void loop()
 
     if (comando == "1") 
     {
+      Serial.print("3");
+      Serial.print(":");
       Serial.println("Iniciando estabilização...");
       modoAtual = MODOESTABILIZAR;
     }
     else if (comando == "2") 
     {
+      Serial.print("3");
+      Serial.print(":");
       Serial.println("Teste de busca iniciado...");
       modoAtual = BUSCAAZIMUTH;
     }
     else if (comando == "3") 
     {
+      Serial.print("3");
+      Serial.print(":");
       Serial.println("Orientando pela luz...");
       modoAtual = MODOORIENTARLUZ;
     }
     else if (comando == "5") 
     {
+      Serial.print("3");
+      Serial.print(":");
       Serial.println("Motores desligados. Sistema parado.");
       // Desliga a alimentação do motor
       digitalWrite(IN1, LOW);
@@ -244,12 +254,20 @@ void loop()
     }
     else if(comando == "6")
     {
-      Serial.println("Abrindo Painel Solares")
+      Serial.println("Abrindo Painel Solares");
     }
 
     else if(comando == "7")
     {
-      Serial.print("Abrindo Antena")
+      Serial.print("3");
+      Serial.print(":");
+      Serial.println("Abrindo Antena");
+      digitalWrite(5, HIGH);
+      digitalWrite(3, LOW);
+      delay(1000);
+      digitalWrite(5,LOW);
+      digitalWrite(3,LOW);
+
     }
 
     else 
