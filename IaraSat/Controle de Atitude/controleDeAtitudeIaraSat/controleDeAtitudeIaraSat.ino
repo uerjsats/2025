@@ -1,3 +1,5 @@
+#include "pinos_gigaTeste.h"
+
 // ===========================================
 // --- Controle de Atitude ---
 // ===========================================
@@ -40,15 +42,6 @@ int anguloMaisClaro = 0;
 int controle = 0;
 double anguloDesejado = 0;
 int alvo = 0;
-
-// ===========================================
-// ------- PINS DO HARDWARE -------
-// ===========================================
-#define LED 13      // LED de status
-#define IN1 5            // Pino de controle 1 do driver de motor (PWM)
-#define IN2 6            // Pino de controle 2 do driver de motor (PWM)
-#define LDRVERMELHO A0  // Sensor LDR 0 (Analog 0), Direita
-#define LDRAZUL A1      // Sensor LDR 1 (Analog 1), Esquerda
 // ------------------------------
 
 // ===========================================
@@ -241,12 +234,12 @@ void loop()
     }
     else if(comando == "6")
     {
-      Serial.println("Abrindo Painel Solares")
+      Serial.println("Abrindo Painel Solares");
     }
 
     else if(comando == "7")
     {
-      Serial.print("Abrindo Antena")
+      Serial.print("Abrindo Antena");
     }
 
     else 
