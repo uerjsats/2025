@@ -12,6 +12,14 @@ bool luzEncontrada = false;       // Flag indicando se já encontrou a luz
 double anguloLuzEncontrada = 0;   // Ângulo onde a luz foi encontrada
 bool executandoOffset = false;    // Flag indicando se está executando o movimento para o offset
 
+// ===========================================
+// --- Variáveis para Comando 8 - Toggle PID ---
+// ===========================================
+bool modoEdicaoPID = false;
+// PID
+  double Kp_pos = 1.5;    // Reduzido para menos oscilação
+  double Kd_pos = 0.3;
+  double Kd_vel = 0.5;
 
 // --- ESTADOS DO SISTEMA (Máquina de Estados) ---
 enum MODOSistema 
@@ -241,7 +249,46 @@ void loop()
     {
       Serial.print("Abrindo Antena");
     }
-
+ // COMANDO 8 - TOGGLE PID
+    else if (comando == "8") 
+    {
+      if (!modoEdicaoPID) {
+        // Primeiro comando 8 - Mostra valores atuais
+        Serial.println("=== VALORES PID ATUAIS ===");
+        Serial.print("Kp_pos: "); Serial.println(Kp_pos, 3);
+        Serial.print("Kd_pos: "); Serial.println(Kd_pos, 3);
+        Serial.print("Kd_vel: "); Serial.println(Kd_vel, 3);
+        Serial.println("Digite 8 novamente para editar valores");
+        modoEdicaoPID = true;
+      } else {
+        // Segundo comando 8 - Modo edição
+        Serial.println("=== MODO EDIÇÃO PID ===");
+        Serial.println("Digite os novos valores:");
+        Serial.println("Formato: KP KD KV");
+        Serial.println("Exemplo: 2.0 0.5 0.8");
+        Serial.println("Valores atuais: " + 
+                      String(Kp_pos, 3) + " " + 
+                      String(Kd_pos, 3) + " " + 
+                      String(Kd_vel, 3));
+        Serial.print(">> ");
+        
+        // Aguarda entrada dos novos valores
+        unsigned long inicioEspera = millis();
+        while (!Serial.available() && (millis() - inicioEspera < 30000)) {
+          delay(100);
+        }
+        
+        if (Serial.available()) {
+          String valores = Serial.readStringUntil('\n');
+          valores.trim();
+          processarValoresPID(valores);
+        } else {
+          Serial.println("Timeout! Modo edição cancelado.");
+        }
+        
+        modoEdicaoPID = false;
+      }
+    }
     else 
     {
       Serial.println("Comando inválido!");
@@ -580,9 +627,6 @@ void irParaAngulo(double anguloAlvo) {
   while (erro < -180) erro += 360;
 
   // Controle PID simplificado
-  double Kp_pos = 1.5;    // Reduzido para menos oscilação
-  double Kd_pos = 0.3;
-  double Kd_vel = 0.5;
 
   double comando = Kp_pos * erro;
 
@@ -630,4 +674,61 @@ void orientarLuz()
     orientado = true;
   }
   irParaAngulo(anguloDesejado);
+}
+// ===========================================
+// --- Função para Processar Valores PID ---
+// ===========================================
+void processarValoresPID(String valores) {
+  // Divide a string pelos espaços
+  int primeiroEspaco = valores.indexOf(' ');
+  int segundoEspaco = valores.indexOf(' ', primeiroEspaco + 1);
+  
+  if (primeiroEspaco == -1 || segundoEspaco == -1) {
+    Serial.println("Erro: Formato inválido! Use: KP KD KV");
+    Serial.println("Exemplo: 2.0 0.5 0.8");
+    return;
+  }
+  
+  String kpStr = valores.substring(0, primeiroEspaco);
+  String kdStr = valores.substring(primeiroEspaco + 1, segundoEspaco);
+  String kvStr = valores.substring(segundoEspaco + 1);
+  
+  kpStr.trim();
+  kdStr.trim();
+  kvStr.trim();
+  
+  float novoKp = kpStr.toFloat();
+  float novoKd = kdStr.toFloat();
+  float novoKv = kvStr.toFloat();
+  
+  // Validação dos valores
+  bool valoresValidos = true;
+  
+  if (novoKp <= 0 || novoKp > 10.0) {
+    Serial.println("Erro: Kp deve ser entre 0.1 e 10.0");
+    valoresValidos = false;
+  }
+  
+  if (novoKd < 0 || novoKd > 5.0) {
+    Serial.println("Erro: Kd deve ser entre 0 e 5.0");
+    valoresValidos = false;
+  }
+  
+  if (novoKv < 0 || novoKv > 5.0) {
+    Serial.println("Erro: Kv deve ser entre 0 e 5.0");
+    valoresValidos = false;
+  }
+  
+  if (valoresValidos) {
+    Kp_pos = novoKp;
+    Kd_pos = novoKd;
+    Kd_vel = novoKv;
+    
+    Serial.println("✓ Valores PID atualizados com sucesso!");
+    Serial.print("Kp_pos: "); Serial.println(Kp_pos, 3);
+    Serial.print("Kd_pos: "); Serial.println(Kd_pos, 3);
+    Serial.print("Kd_vel: "); Serial.println(Kd_vel, 3);
+  } else {
+    Serial.println("✗ Valores não alterados devido a erros.");
+  }
 }
