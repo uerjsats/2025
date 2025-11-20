@@ -1,4 +1,6 @@
+//Inclusão de bibliotecas de pinos
 #include "pinos_gigaTeste.h"
+
 
 // ===========================================
 // --- Controle de Atitude ---
@@ -6,6 +8,13 @@
 // Define o modo de controle (pode ser usado para alternar entre diferentes algoritmos)
 #define CONTROLLERMODE 0
 #define SERIAL_DEBUG_ENABLE 1
+
+
+//===========================================
+// --- Constantes para Painel e ANtenas  ---
+// ===========================================
+#define TEMPO_ACIONAMENTO_PAINEL 5000
+#define TIMEOUT_ANTENA 10000
 
 double anguloOffset = 0;          // Ângulo adicional a ser adicionado após encontrar a luz
 bool luzEncontrada = false;       // Flag indicando se já encontrou a luz
@@ -77,7 +86,10 @@ unsigned int pulsosPorVolta = 6;
 // Pino digital configurado como interrupção para o tacômetro
 const byte pinoInterrupcao = 2;
 // ------------------------------------
-
+bool modoEstabilizacao = false;
+bool modoAnguloAlvo = false;
+double anguloAlvo = 0;
+unsigned long ultimoEnvioAngulo = 0;
 // ===========================================
 // ------ MPU6050 (Giroscópio e Acelerômetro) -----
 // ===========================================
@@ -91,6 +103,8 @@ double erro = 0;
 double alfaSat = 0;
 // Velocidade angular lida pelo giroscópio
 double omegaSat = 0;
+double yawAngle = 0, yawAngularSpeed = 0;
+
 // -----------------------------------------
 
 // ===========================================
@@ -146,6 +160,32 @@ bool luzTravada = false;    // indica se já definiu o zero da luz
 // --- FUNÇÕES ---
 // ===========================================
 
+void ativaPinoPorTempo(int pino1, int pino2, unsigned long tempoAtivo) {
+  digitalWrite(pino1, HIGH);           // Ativa o pino
+  digitalWrite(pino2, HIGH);
+  delay(tempoAtivo);                  // Aguarda o tempo especificado
+  digitalWrite(pino1, LOW);            // Desativa o pino
+  digitalWrite(pino2, LOW);    
+}
+
+int lerEntradaAnalogicaComoDigital(uint8_t pinoAnalogico, int limiar = 512) {
+  int valor = analogRead(pinoAnalogico);
+  return (valor > limiar) ? HIGH : LOW;
+}
+
+bool aguardaValorChave(int pinoChave, int valorEsperado, unsigned long tempoTimeout) {
+  unsigned long inicio = millis();
+
+  while (millis() - inicio < tempoTimeout) {
+    int valorAtual = lerEntradaAnalogicaComoDigital(pinoChave);
+    if (valorAtual == valorEsperado) {
+      return true; // Valor esperado atingido dentro do tempo
+    }
+  }
+
+  return false; // Timeout atingido sem atingir o valor esperado
+}
+
 // Função de interrupção: incrementa o contador de pulsos do tacômetro
 void contarPulso() 
 {
@@ -168,8 +208,8 @@ int16_t readMPU()
 // Função de inicialização
 void setup() 
 {
-  Serial.begin(115200);
-  // Configura o pino do tacômetro como entrada
+  // Inicia comunicação |Serial
+  Serial.begin(9600);
   pinMode(pinoInterrupcao, INPUT);
 
   // Configuração do MPU
@@ -219,21 +259,64 @@ void loop()
 
     if (comando == "1") 
     {
+      Serial.print("3");
+      Serial.print(":");
       Serial.println("Iniciando estabilização...");
       modoAtual = MODOESTABILIZAR;
     }
     else if (comando == "2") 
     {
-      Serial.println("Teste de busca iniciado...");
-      modoAtual = BUSCAAZIMUTH;
+
+      float angulo1, angulo2;
+      
+      Serial.print("3 : Informe os Angulos ");
+      comando = Serial.readStringUntil('\n');
+      // Encontra a posição do caractere delimitador ':'
+      int indiceDoisPontos = comando.indexOf(":");
+      // Se o delimitador foi encontrado e não está no início nem no fim da string
+      if (indiceDoisPontos != -1 && indiceDoisPontos > 0 && indiceDoisPontos < comando.length() - 1) {
+        // Extrai a primeira parte (antes dos dois pontos)
+        String strAngulo1 = comando.substring(0, indiceDoisPontos);
+        // Extrai a segunda parte (depois dos dois pontos)
+        String strAngulo2 = comando.substring(indiceDoisPontos + 1);
+
+        // Converte as substrings para inteiros
+        angulo1 = strAngulo1.toInt();
+        angulo2 = strAngulo2.toInt();
+
+      }
+      normaliza360(angulo1);
+      irParaAngulo(angulo1);
+      delay(1000);
+      irParaAngulo(abs(angulo1 - 360));
+      normaliza360(angulo2);
+      irParaAngulo(angulo2);
+      irParaAngulo(abs(angulo2 - 360));
+
     }
     else if (comando == "3") 
     {
+      Serial.print("3");
+      Serial.print(":");
       Serial.println("Orientando pela luz...");
       modoAtual = MODOORIENTARLUZ;
     }
+
+    else if (comando == "4")
+    {
+
+      float alfaAzimuth = girar360();
+      Serial.print("3");
+      Serial.print(":");
+      Serial.print("Azimuth encontrado: ");
+      Serial.println(alfaAzimuth);
+
+    }
+
     else if (comando == "5") 
     {
+      Serial.print("3");
+      Serial.print(":");
       Serial.println("Motores desligados. Sistema parado.");
       // Desliga a alimentação do motor
       digitalWrite(IN1, LOW);
@@ -242,27 +325,78 @@ void loop()
     }
     else if(comando == "6")
     {
+      digitalWrite(LED, HIGH);
+      Serial.print("3");
+      Serial.print(":");
       Serial.println("Abrindo Painel Solares");
+
+      digitalWrite(PAINEL_IN4, LOW);
+      digitalWrite(PAINEL_IN2, LOW);
+      ativaPinoPorTempo(PAINEL_IN3,PAINEL_IN1, TEMPO_ACIONAMENTO_PAINEL);
+      digitalWrite(PAINEL_IN3, LOW);
+      digitalWrite(PAINEL_IN1, LOW);
+
+      digitalWrite(LED, LOW);
     }
 
     else if(comando == "7")
     {
-      Serial.print("Abrindo Antena");
+      Serial.print("3");
+      Serial.print(":");
+      Serial.println("Abrindo Antena");
+      digitalWrite(ANTIN1, HIGH);
+      digitalWrite(ANTIN2, LOW);
+      if (aguardaValorChave(SWANT1, HIGH,TEMPO_ACIONAMENTO_PAINEL)) 
+      { // aguarda a chave fechar e colocar +%V na entrada do pino do arduino
+          digitalWrite(ANTIN1,LOW);
+          digitalWrite(ANTIN2,LOW);
+      }
+      else 
+      {
+          Serial.print("3");
+          Serial.print(":");
+          Serial.println("Chave com defeito");
+          digitalWrite(ANTIN1,LOW);
+          digitalWrite(ANTIN2,LOW);
+      }
     }
- // COMANDO 8 - TOGGLE PID
-    else if (comando == "8") 
+
+    else if(comando == "8")
+    {
+      Serial.print("3");
+      Serial.print(":");
+      Serial.println("Fechando Antena");
+      digitalWrite(LED, HIGH);
+      digitalWrite(ANTIN1, LOW);
+      digitalWrite(ANTIN2, HIGH);
+      if (aguardaValorChave(SWANT2, HIGH,TEMPO_ACIONAMENTO_PAINEL)) { // aguarda a chave fechar e colocar +%V na entrada do pino do arduino
+          digitalWrite(ANTIN1,LOW);
+          digitalWrite(ANTIN2,LOW);
+      }
+      else {
+        Serial.print("3");
+        Serial.print(":");
+        Serial.println("Chave com defeito");
+        digitalWrite(ANTIN1,LOW);
+        digitalWrite(ANTIN2,LOW);
+      }
+      digitalWrite(LED, LOW);
+    }
+
+    // COMANDO 9 - TOGGLE PID
+    else if (comando == "9") 
     {
       if (!modoEdicaoPID) {
-        // Primeiro comando 8 - Mostra valores atuais
-        Serial.println("=== VALORES PID ATUAIS ===");
+        // Primeiro comando 9 - Mostra valores atuais
+        Serial.println("3 : Valores Atuais");
         Serial.print("Kp_pos: "); Serial.println(Kp_pos, 3);
         Serial.print("Kd_pos: "); Serial.println(Kd_pos, 3);
         Serial.print("Kd_vel: "); Serial.println(Kd_vel, 3);
-        Serial.println("Digite 8 novamente para editar valores");
+        Serial.println("Digite 9 novamente para editar valores");
         modoEdicaoPID = true;
       } else {
-        // Segundo comando 8 - Modo edição
-        Serial.println("=== MODO EDIÇÃO PID ===");
+        // Segundo comando 9 - Modo edição
+        Serial.println("3: Edição de PID");
         Serial.println("Digite os novos valores:");
         Serial.println("Formato: KP KD KV");
         Serial.println("Exemplo: 2.0 0.5 0.8");
@@ -272,23 +406,30 @@ void loop()
                       String(Kd_vel, 3));
         Serial.print(">> ");
         
-        // Aguarda entrada dos novos valores
-        unsigned long inicioEspera = millis();
-        while (!Serial.available() && (millis() - inicioEspera < 30000)) {
-          delay(100);
-        }
-        
         if (Serial.available()) {
           String valores = Serial.readStringUntil('\n');
           valores.trim();
           processarValoresPID(valores);
-        } else {
-          Serial.println("Timeout! Modo edição cancelado.");
         }
         
         modoEdicaoPID = false;
       }
     }
+
+    else if(comando == "10")
+    {
+
+      //Em fase de testes
+
+    }
+
+    else if(comando == "11")
+    {
+
+      //Em fase de testes
+
+    }
+
     else 
     {
       Serial.println("Comando inválido!");
@@ -307,9 +448,6 @@ void loop()
 
     case MODOORIENTARLUZ:
       orientarLuz();
-      break;
-
-    case BUSCAAZIMUTH:
       break;
   }
 }
@@ -670,7 +808,7 @@ void orientarLuz()
   anguloatual();
   if (!orientado)
   {
-    anguloDesejado = girar360() - 180;
+    anguloDesejado = girar360();
     orientado = true;
   }
   irParaAngulo(anguloDesejado);
@@ -724,7 +862,7 @@ void processarValoresPID(String valores) {
     Kd_pos = novoKd;
     Kd_vel = novoKv;
     
-    Serial.println("✓ Valores PID atualizados com sucesso!");
+    Serial.println("Valores PID atualizados com sucesso!");
     Serial.print("Kp_pos: "); Serial.println(Kp_pos, 3);
     Serial.print("Kd_pos: "); Serial.println(Kd_pos, 3);
     Serial.print("Kd_vel: "); Serial.println(Kd_vel, 3);
