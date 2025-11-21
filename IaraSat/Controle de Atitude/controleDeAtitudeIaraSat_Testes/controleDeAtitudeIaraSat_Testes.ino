@@ -34,6 +34,7 @@ enum MODOSistema
   MODOPARADO,          // O motor de reação está desligado
   MODOESTABILIZAR,     // Modo de controle de velocidade angular (cancelamento de giro)
   MODOORIENTARLUZ,    // Modo de busca e travamento na fonte de luz (LDR)
+  MODOORIENTAUM,
   MODOORIENTADOIS
 };
 
@@ -440,21 +441,8 @@ void loop()
     case MODOORIENTARLUZ:
       orientarLuz();
       break;
-    case MODOORIENTADOIS:
-      if (!noAlvo)
-      {
-
-        irParaAngulo(angulo1);
-        noAlvo = true;
-
-      }
-      else
-      {
-
-        irParaAngulo(angulo2);
-        modoAtual = MODOPARADO;
-      }
-
+    case MODOORIENTAUM:
+      executarDoisAngulos();
       break;
   }
 }
@@ -785,40 +773,41 @@ void anguloatual() {
 
 // Move a roda de reação para o ângulo escolhido
 void irParaAngulo(double anguloAlvo) {
+
   anguloatual();
 
+  // Calcula erro normalizado entre -180 e 180
   double erro = anguloAlvo - alfaSat;
   while (erro > 180) erro -= 360;
   while (erro < -180) erro += 360;
 
-  // Controle PID simplificado
+  // Se já está no alvo, para o motor e sai
+  if (chegouNoAngulo(anguloAlvo)) {
+    defineVelocidade(0);
+    return;
+  }
 
+  // === Controle PID simplificado ===
   double comando = Kp_pos * erro;
 
   static double erroAnterior = 0;
   double derivadaErro = erro - erroAnterior;
   erroAnterior = erro;
+
   comando += Kd_pos * derivadaErro;
 
+  // Compensa velocidade angular atual
   comando -= Kd_vel * omegaSat;
 
-  // Saturação mais conservadora
+  // Saturação de segurança
   comando = constrain(comando, -120, 120);
 
-  // Condição de parada mais rigorosa
-  if (fabs(erro) < 3.0 && fabs(omegaSat) < 1.0) {
-    defineVelocidade(0);
-    estabilizar();
-    if(SERIAL_DEBUG_ENABLE) {
-      Serial.println("Alvo atingido e estabilizado.");
-    }
-  } else {
-    defineVelocidade(comando);
-  }
-
+  // Aplica comando ao motor
+  defineVelocidade(comando);
 }
 
-// Orienta para luz, definindo onde ela está e girando para o ângulo
+
+
 void orientarLuz()
 {
 
@@ -888,4 +877,40 @@ void processarValoresPID(String valores) {
   } else {
     Serial.println("✗ Valores não alterados devido a erros.");
   }
+}
+
+
+bool chegouNoAngulo(double alvo) {
+  anguloatual();
+
+  double erro = alvo - alfaSat;
+  while (erro > 180) erro -= 360;
+  while (erro < -180) erro += 360;
+
+  // Critérios para considerar que chegou
+  if (fabs(erro) < 8.0 && fabs(omegaSat) < 5.0) {
+    return true;
+  }
+  return false;
+}
+
+void executarDoisAngulos() {
+    static bool indoParaPrimeiro = true;
+
+    if (indoParaPrimeiro) {
+        irParaAngulo(angulo1);
+        if (chegouNoAngulo(angulo1)) {
+            defineVelocidade(0);
+            delay(300);
+            indoParaPrimeiro = false; 
+        }
+    } else {
+        irParaAngulo(angulo2);
+        if (chegouNoAngulo(angulo2)) {
+            defineVelocidade(0);
+            delay(300);
+            indoParaPrimeiro = true;
+            modoAtual = MODOPARADO;  
+        }
+    }
 }
