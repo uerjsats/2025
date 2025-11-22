@@ -209,7 +209,7 @@ int16_t readMPU()
 void setup() 
 {
   // Inicia comunicação |Serial
-  Serial.begin(9600);
+  Serial.begin(115200);
   pinMode(pinoInterrupcao, INPUT);
 
   // Configuração do MPU
