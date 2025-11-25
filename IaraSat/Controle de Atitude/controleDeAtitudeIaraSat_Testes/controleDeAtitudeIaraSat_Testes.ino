@@ -398,13 +398,17 @@ void loop()
         Serial.println("Valores atuais: " + String(Kp_pos, 3) + " " + String(Kd_pos, 3) + " " + String(Kd_vel, 3));
         Serial.print(">> ");
         
-        if (Serial.available()) {
-          String valores = Serial.readStringUntil('\n');
-          valores.trim();
-          processarValoresPID(valores);
-        }
-        
-        modoEdicaoPID = false;
+      // Espera o usuário digitar a linha completa
+while (Serial.available() == 0) {
+  // nada — apenas aguarda
+}
+
+String valores = Serial.readStringUntil('\n');
+valores.trim();
+processarValoresPID(valores);
+
+modoEdicaoPID = false;
+
       }
     }
 
@@ -825,81 +829,59 @@ void orientarLuz()
 // --- Função para Processar Valores PID ---
 // ===========================================
 void processarValoresPID(String valores) {
-  valores.trim();
-
-  while (valores.indexOf("  ") != -1) {
-    valores.replace("  ", " ");
-  }
-
-  int esp1 = valores.indexOf(' ');
-  int esp2 = valores.indexOf(' ', esp1 + 1);
-
-  if (esp1 == -1 || esp2 == -1) {
+  // Divide a string pelos espaços
+  int primeiroEspaco = valores.indexOf(' ');
+  int segundoEspaco = valores.indexOf(' ', primeiroEspaco + 1);
+  
+  if (primeiroEspaco == -1 || segundoEspaco == -1) {
     Serial.println("Erro: Formato inválido! Use: KP KD KV");
     Serial.println("Exemplo: 2.0 0.5 0.8");
     return;
   }
-
-  String kpStr = valores.substring(0, esp1);
-  String kdStr = valores.substring(esp1 + 1, esp2);
-  String kvStr = valores.substring(esp2 + 1);
-
+  
+  String kpStr = valores.substring(0, primeiroEspaco);
+  String kdStr = valores.substring(primeiroEspaco + 1, segundoEspaco);
+  String kvStr = valores.substring(segundoEspaco + 1);
+  
   kpStr.trim();
   kdStr.trim();
   kvStr.trim();
-
-  if (!kpStr.length() || !kdStr.length() || !kvStr.length()) {
-    Serial.println("Erro: Valores vazios detectados!");
-    return;
-  }
-
+  
   float novoKp = kpStr.toFloat();
   float novoKd = kdStr.toFloat();
   float novoKv = kvStr.toFloat();
-
-  bool erroConversao = false;
-
-  if (novoKp == 0 && kpStr != "0" && kpStr != "0.0") erroConversao = true;
-  if (novoKd == 0 && kdStr != "0" && kdStr != "0.0") erroConversao = true;
-  if (novoKv == 0 && kvStr != "0" && kvStr != "0.0") erroConversao = true;
-
-  if (erroConversao) {
-    Serial.println("Erro: Um ou mais valores não são numéricos!");
-    return;
-  }
-
-  bool valido = true;
-
-  if (novoKp < 0.1 || novoKp > 10.0) {
+  
+  // Validação dos valores
+  bool valoresValidos = true;
+  
+  if (novoKp <= 0 || novoKp > 10.0) {
     Serial.println("Erro: Kp deve ser entre 0.1 e 10.0");
-    valido = false;
+    valoresValidos = false;
   }
-
+  
   if (novoKd < 0 || novoKd > 5.0) {
     Serial.println("Erro: Kd deve ser entre 0 e 5.0");
-    valido = false;
+    valoresValidos = false;
   }
-
+  
   if (novoKv < 0 || novoKv > 5.0) {
     Serial.println("Erro: Kv deve ser entre 0 e 5.0");
-    valido = false;
+    valoresValidos = false;
   }
-
-  if (!valido) {
-    Serial.println("Valores não alterados devido a erros.");
-    return;
+  
+  if (valoresValidos) {
+    Kp_pos = novoKp;
+    Kd_pos = novoKd;
+    Kd_vel = novoKv;
+    
+    Serial.println("Valores PID atualizados com sucesso!");
+    Serial.print("Kp_pos: "); Serial.println(Kp_pos, 3);
+    Serial.print("Kd_pos: "); Serial.println(Kd_pos, 3);
+    Serial.print("Kd_vel: "); Serial.println(Kd_vel, 3);
+  } else {
+    Serial.println("✗ Valores não alterados devido a erros.");
   }
-
-  Kp_pos = novoKp;
-  Kd_pos = novoKd;
-  Kd_vel = novoKv;
-
-  Serial.println("Valores PID atualizados com sucesso!");
-  Serial.print("Kp_pos: "); Serial.println(Kp_pos, 3);
-  Serial.print("Kd_pos: "); Serial.println(Kd_pos, 3);
-  Serial.print("Kd_vel: "); Serial.println(Kd_vel, 3);
 }
-
 
 
 bool chegouNoAngulo(double alvo) {
