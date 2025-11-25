@@ -551,7 +551,7 @@ void estabilizar()
     double velocidade_maxima_dinamica = VELOCIDADEMAXIMA * (1.0 + fabs(mediaMovel) / 10.0);
 
     // Limite máximo absoluto para segurança da roda
-    const double VELOCIDADE_MAXIMA_ABSOLUTA = 60 * MICROSTEPPING; // Ex: 60 RPS
+    const double VELOCIDADE_MAXIMA_ABSOLUTA = 200; // Ex: 60 RPS
     if (velocidade_maxima_dinamica > VELOCIDADE_MAXIMA_ABSOLUTA) 
     {
       velocidade_maxima_dinamica = VELOCIDADE_MAXIMA_ABSOLUTA;
