@@ -1,19 +1,34 @@
 //Inclusão de bibliotecas de pinos
-#include "pinos_gigaTeste.h"
+#include "pinos_placa_v1.h"
+#include <SoftwareSerial.h>
+
 
 // ===========================================
 // --- Controle de Atitude ---
 // ===========================================
 // Define o modo de controle (pode ser usado para alternar entre diferentes algoritmos)
 #define CONTROLLERMODE 0
-#define SERIAL_DEBUG_ENABLE 1
+#define linkSerial_DEBUG_ENABLE 1
+
+// Define os códigos de retorno
+
+#define CA_READY "0"
+#define CA_ININT_ESTAB "1" // incializar modo de estabilização
+#define CA_ORIENT_LUZ  "3"
+#define CA_AZIMUT_ENCONTRADO "4"
+#define CA_MOTOR_PARADO    "5"
+#define CA_ABRINDO_PAINEL "6"
+#define CA_ABRINDO_ANTENA  "7"
+#define CA_CHAVE_ABRINDO_DEFEITO "70"
+#define CA_FECHANDO_ANTENA "8"
+#define CA_CHAVE_FECHANDO_DEFEITO "80"
 
 //===========================================
 // --- Constantes para Painel e ANtenas  ---
 // ===========================================
 #define TEMPO_ACIONAMENTO_PAINEL 5000
 #define TIMEOUT_ANTENA 10000
-
+SoftwareSerial linkSerial(12,4);
 double anguloOffset = 0;          // Ângulo adicional a ser adicionado após encontrar a luz
 bool luzEncontrada = false;       // Flag indicando se já encontrou a luz
 double anguloLuzEncontrada = 0;   // Ângulo onde a luz foi encontrada
@@ -208,8 +223,11 @@ int16_t readMPU()
 // Função de inicialização
 void setup() 
 {
-  // Inicia comunicação |Serial
-  Serial.begin(115200);
+  // Inicia comunicação |linkSerial
+  linkSerial.begin(9600);
+  delay(500); // espera estabilizar
+  while (linkSerial.available()) linkSerial.read(); // descarta lixo inicial
+ 
   pinMode(pinoInterrupcao, INPUT);
 
   // Configuração do MPU
@@ -227,7 +245,7 @@ void setup()
 
   // Configura e acende o LED de status
   pinMode(LED, OUTPUT);
-  digitalWrite(LED, 1);
+  digitalWrite(LED, 0);
 
   // Inicializa as variáveis de tempo globais
   tempoAtual = millis();
@@ -245,30 +263,34 @@ void setup()
   pinMode(IN2, OUTPUT);
   digitalWrite(IN1, LOW);
   digitalWrite(IN2, LOW);
+
+
+ linkSerial.println(CA_READY); // setup do CA terminado 
+  
 }
 
 // Função principal do programa, executada repetidamente
 void loop() 
 {
 
-  // === Comunicação Serial (Recebimento de Comandos) ===
-  if (Serial.available() > 0) 
+  // === Comunicação linkSerial (Recebimento de Comandos) ===
+  if (linkSerial.available() > 0) 
   {
-    String comando = Serial.readStringUntil('\n');
+    String comando = linkSerial.readStringUntil('\n');
     comando.trim();
 
     if (comando == "1") 
     {
-      Serial.print("3");
-      Serial.print(":");
-      Serial.println("Iniciando estabilização...");
+      linkSerial.print("3");
+      linkSerial.print(":");
+      linkSerial.println(CA_ININT_ESTAB);
       modoAtual = MODOESTABILIZAR;
     }
     else if (comando == "2") 
     {
       
-      Serial.print("3 : Informe os Angulos ");
-      comando = Serial.readStringUntil('\n');
+      linkSerial.print("3 : Informe os Angulos ");
+      comando = linkSerial.readStringUntil('\n');
       // Encontra a posição do caractere delimitador ':'
       int indiceDoisPontos = comando.indexOf(":");
       // Se o delimitador foi encontrado e não está no início nem no fim da string
@@ -290,9 +312,9 @@ void loop()
     }
     else if (comando == "3") 
     {
-      Serial.print("3");
-      Serial.print(":");
-      Serial.println("Orientando pela luz...");
+      linkSerial.print("3");
+      linkSerial.print(":");
+      linkSerial.println(CA_ORIENT_LUZ);// orienta para a Luz
       orientado = false;
       modoAtual = MODOORIENTARLUZ;
     }
@@ -301,18 +323,18 @@ void loop()
     {
 
       float alfaAzimuth = girar360();
-      Serial.print("3");
-      Serial.print(":");
-      Serial.print("Azimuth encontrado: ");
-      Serial.println(alfaAzimuth);
+      linkSerial.print("3");
+      linkSerial.print(":");
+      linkSerial.print(CA_AZIMUT_ENCONTRADO); // Azimut encontrado 
+      linkSerial.println(alfaAzimuth);
 
     }
 
     else if (comando == "5") 
     {
-      Serial.print("3");
-      Serial.print(":");
-      Serial.println("Motores desligados. Sistema parado.");
+      linkSerial.print("3");
+      linkSerial.print(":");
+      linkSerial.println(CA_MOTOR_PARADO);
       // Desliga a alimentação do motor
       digitalWrite(IN1, LOW);
       digitalWrite(IN2, LOW);
@@ -321,9 +343,9 @@ void loop()
     else if(comando == "6")
     {
       digitalWrite(LED, HIGH);
-      Serial.print("3");
-      Serial.print(":");
-      Serial.println("Abrindo Painel Solares");
+      linkSerial.print("3");
+      linkSerial.print(":");
+      linkSerial.println(CA_ABRINDO_PAINEL);
 
       digitalWrite(PAINEL_IN4, LOW);
       digitalWrite(PAINEL_IN2, LOW);
@@ -336,9 +358,9 @@ void loop()
 
     else if(comando == "7")
     {
-      Serial.print("3");
-      Serial.print(":");
-      Serial.println("Abrindo Antena");
+      linkSerial.print("3");
+      linkSerial.print(":");
+      linkSerial.println(CA_ABRINDO_ANTENA);
       digitalWrite(ANTIN1, HIGH);
       digitalWrite(ANTIN2, LOW);
       if (aguardaValorChave(SWANT1, HIGH,TEMPO_ACIONAMENTO_PAINEL)) 
@@ -348,9 +370,9 @@ void loop()
       }
       else 
       {
-          Serial.print("3");
-          Serial.print(":");
-          Serial.println("Chave com defeito");
+          linkSerial.print("3");
+          linkSerial.print(":");
+          linkSerial.println(CA_CHAVE_ABRINDO_DEFEITO);
           digitalWrite(ANTIN1,LOW);
           digitalWrite(ANTIN2,LOW);
       }
@@ -358,9 +380,9 @@ void loop()
 
     else if(comando == "8")
     {
-      Serial.print("3");
-      Serial.print(":");
-      Serial.println("Fechando Antena");
+      linkSerial.print("3");
+      linkSerial.print(":");
+      linkSerial.println(CA_FECHANDO_ANTENA);
       digitalWrite(LED, HIGH);
       digitalWrite(ANTIN1, LOW);
       digitalWrite(ANTIN2, HIGH);
@@ -369,9 +391,9 @@ void loop()
           digitalWrite(ANTIN2,LOW);
       }
       else {
-        Serial.print("3");
-        Serial.print(":");
-        Serial.println("Chave com defeito");
+        linkSerial.print("3");
+        linkSerial.print(":");
+        linkSerial.println(CA_CHAVE_FECHANDO_DEFEITO);
         digitalWrite(ANTIN1,LOW);
         digitalWrite(ANTIN2,LOW);
       }
@@ -381,42 +403,60 @@ void loop()
     // COMANDO 9 - TOGGLE PID
     else if (comando == "9") 
     {
-      if (!modoEdicaoPID) {
-        // Primeiro comando 9 - Mostra valores atuais
-        Serial.println("3 : Valores Atuais");
-        Serial.print("Kp_pos: "); Serial.println(Kp_pos, 3);
-        Serial.print("Kd_pos: "); Serial.println(Kd_pos, 3);
-        Serial.print("Kd_vel: "); Serial.println(Kd_vel, 3);
-        Serial.println("Digite 9 novamente para editar valores");
+       if (!modoEdicaoPID) {
+        // Primeiro comando 9 → mostra valores atuais
+        linkSerial.print("3: ");
+        linkSerial.print(Kp_pos, 3);
+        linkSerial.print(" ");
+        linkSerial.print(Kd_pos, 3);
+        linkSerial.print(" ");
+        linkSerial.println(Kd_vel, 3);
+
+        linkSerial.println("Digite 9 novamente para editar valores.");
         modoEdicaoPID = true;
-      } else {
-        // Segundo comando 9 - Modo edição
-        Serial.println("3: Edição de PID");
-        Serial.println("Digite os novos valores:");
-        Serial.println("Formato: KP KD KV");
-        Serial.println("Exemplo: 2.0 0.5 0.8");
-        Serial.println("Valores atuais: " + String(Kp_pos, 3) + " " + String(Kd_pos, 3) + " " + String(Kd_vel, 3));
-        Serial.print(">> ");
-        
-      // Espera o usuário digitar a linha completa
-while (Serial.available() == 0) {
-  // nada — apenas aguarda
-}
+       } // if !modoEdicaoPID
 
-String valores = Serial.readStringUntil('\n');
-valores.trim();
-processarValoresPID(valores);
+       else {
+          // Segundo comando 9 → entra em modo edição
+          linkSerial.println("3: Edição de PID");
+          linkSerial.println("Digite os novos valores (KP KD KV):");
+          linkSerial.println("Exemplo: 2.0 0.5 0.8");
+          linkSerial.print(">> ");
 
-modoEdicaoPID = false;
+          // Espera até 5 segundos pela entrada
+          unsigned long inicio = millis();
+          while (linkSerial.available() == 0 && (millis() - inicio) < 50000) {
+           // não bloqueia outras tarefas se você colocar aqui
+          }
 
-      }
-    }
+
+          if (linkSerial.available() > 0) {
+          String valores = linkSerial.readStringUntil('\n');
+          valores.trim();
+          processarValoresPID(valores);
+          } else {
+             linkSerial.println("Tempo limite atingido (5s) sem entrada.");
+             }
+
+          modoEdicaoPID = false; // sai do modo edição
+
+       } // else
+
+
+
+    } // comando 9 
+      
+
+
+  
+   
+
 
     else if(comando == "10")
     {
 
       //Em fase de testes
-
+      
     }
 
     else if(comando == "11")
@@ -428,7 +468,7 @@ modoEdicaoPID = false;
 
     else 
     {
-      Serial.println("Comando inválido!");
+      linkSerial.println("Comando inválido!");
     }
   }
   // === Execução dos modos (Máquina de Estados) ===
@@ -555,7 +595,7 @@ void estabilizar()
     double velocidade_maxima_dinamica = VELOCIDADEMAXIMA * (1.0 + fabs(mediaMovel) / 10.0);
 
     // Limite máximo absoluto para segurança da roda
-    const double VELOCIDADE_MAXIMA_ABSOLUTA = 200; // Ex: 60 RPS
+    const double VELOCIDADE_MAXIMA_ABSOLUTA = 60 * MICROSTEPPING; // Ex: 60 RPS
     if (velocidade_maxima_dinamica > VELOCIDADE_MAXIMA_ABSOLUTA) 
     {
       velocidade_maxima_dinamica = VELOCIDADE_MAXIMA_ABSOLUTA;
@@ -654,8 +694,8 @@ float girar360() {
   unsigned long inicioBusca = millis();
   const unsigned long tempoMaximo = 30000;
 
-  if (SERIAL_DEBUG_ENABLE) {
-    Serial.println("Iniciando busca 360 graus...");
+  if (linkSerial_DEBUG_ENABLE) {
+    linkSerial.println("Iniciando busca 360 graus...");
   }
 
   defineVelocidade(80);
@@ -702,12 +742,12 @@ float girar360() {
   defineVelocidade(0);
   delay(300);
 
-  if (SERIAL_DEBUG_ENABLE) {
-    Serial.println("Varredura completa!");
-    Serial.print("Melhor angulo: ");
-    Serial.println(anguloMaisClaro);
-    Serial.print("Maior luz: ");
-    Serial.println(maiorLuz);
+  if (linkSerial_DEBUG_ENABLE) {
+    linkSerial.println("Varredura completa!");
+    linkSerial.print("Melhor angulo: ");
+    linkSerial.println(anguloMaisClaro);
+    linkSerial.print("Maior luz: ");
+    linkSerial.println(maiorLuz);
   }
   modoAtual = MODOPARADO;
   return anguloMaisClaro;
@@ -830,12 +870,14 @@ void orientarLuz()
 // ===========================================
 void processarValoresPID(String valores) {
   // Divide a string pelos espaços
+
+  linkSerial.println("Entrando na função");
   int primeiroEspaco = valores.indexOf(' ');
   int segundoEspaco = valores.indexOf(' ', primeiroEspaco + 1);
   
   if (primeiroEspaco == -1 || segundoEspaco == -1) {
-    Serial.println("Erro: Formato inválido! Use: KP KD KV");
-    Serial.println("Exemplo: 2.0 0.5 0.8");
+    linkSerial.println("Erro: Formato inválido! Use: KP KD KV");
+    linkSerial.println("Exemplo: 2.0 0.5 0.8");
     return;
   }
   
@@ -855,17 +897,17 @@ void processarValoresPID(String valores) {
   bool valoresValidos = true;
   
   if (novoKp <= 0 || novoKp > 10.0) {
-    Serial.println("Erro: Kp deve ser entre 0.1 e 10.0");
+    linkSerial.println("Erro: Kp deve ser entre 0.1 e 10.0");
     valoresValidos = false;
   }
   
   if (novoKd < 0 || novoKd > 5.0) {
-    Serial.println("Erro: Kd deve ser entre 0 e 5.0");
+    linkSerial.println("Erro: Kd deve ser entre 0 e 5.0");
     valoresValidos = false;
   }
   
   if (novoKv < 0 || novoKv > 5.0) {
-    Serial.println("Erro: Kv deve ser entre 0 e 5.0");
+    linkSerial.println("Erro: Kv deve ser entre 0 e 5.0");
     valoresValidos = false;
   }
   
@@ -874,14 +916,15 @@ void processarValoresPID(String valores) {
     Kd_pos = novoKd;
     Kd_vel = novoKv;
     
-    Serial.println("Valores PID atualizados com sucesso!");
-    Serial.print("Kp_pos: "); Serial.println(Kp_pos, 3);
-    Serial.print("Kd_pos: "); Serial.println(Kd_pos, 3);
-    Serial.print("Kd_vel: "); Serial.println(Kd_vel, 3);
+    linkSerial.println("Valores PID atualizados com sucesso!");
+    linkSerial.print("Kp_pos: "); linkSerial.println(Kp_pos, 3);
+    linkSerial.print("Kd_pos: "); linkSerial.println(Kd_pos, 3);
+    linkSerial.print("Kd_vel: "); linkSerial.println(Kd_vel, 3);
   } else {
-    Serial.println("✗ Valores não alterados devido a erros.");
+    linkSerial.println("✗ Valores não alterados devido a erros.");
   }
 }
+
 
 
 bool chegouNoAngulo(double alvo) {
