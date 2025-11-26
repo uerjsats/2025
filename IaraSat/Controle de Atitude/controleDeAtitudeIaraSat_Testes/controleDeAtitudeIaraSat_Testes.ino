@@ -327,6 +327,7 @@ void loop()
       linkSerial.print(":");
       linkSerial.print(CA_AZIMUT_ENCONTRADO); // Azimut encontrado 
       linkSerial.println(alfaAzimuth);
+       modoAtual = MODOPARADO;
 
     }
 
@@ -354,6 +355,7 @@ void loop()
       digitalWrite(PAINEL_IN1, LOW);
 
       digitalWrite(LED, LOW);
+       modoAtual = MODOPARADO;
     }
 
     else if(comando == "7")
@@ -376,6 +378,7 @@ void loop()
           digitalWrite(ANTIN1,LOW);
           digitalWrite(ANTIN2,LOW);
       }
+       modoAtual = MODOPARADO;
     }
 
     else if(comando == "8")
@@ -398,6 +401,7 @@ void loop()
         digitalWrite(ANTIN2,LOW);
       }
       digitalWrite(LED, LOW);
+       modoAtual = MODOPARADO;
     }
 
     // COMANDO 9 - TOGGLE PID
@@ -439,6 +443,8 @@ void loop()
              }
 
           modoEdicaoPID = false; // sai do modo edição
+           modoAtual = MODOPARADO;
+
 
        } // else
 
@@ -485,7 +491,7 @@ void loop()
     case MODOORIENTARLUZ:
       orientarLuz();
       break;
-    case MODOORIENTAUM:
+    case MODOORIENTADOIS:
       executarDoisAngulos();
       break;
   }
